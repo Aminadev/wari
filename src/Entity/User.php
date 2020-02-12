@@ -3,12 +3,18 @@
 namespace App\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
+use App\Controller\UserController;
+use Doctrine\Common\Collections\Collection;
 use ApiPlatform\Core\Annotation\ApiResource;
+use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 /**
- * @ApiResource()
+ * @ApiResource(
+ * )
  * @ORM\Entity(repositoryClass="App\Repository\UserRepository")
+ *  @UniqueEntity("email" , message="cette adresse email existe déja.")
  */
 class User implements UserInterface
 {
@@ -46,9 +52,26 @@ class User implements UserInterface
     private $isActive;
     private $roles = [];
 
+    /**
+     * @ORM\ManyToOne(targetEntity="App\Entity\Partenaire", inversedBy="User")
+     */
+    private $partenaire;
+
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Depot", mappedBy="User", orphanRemoval=true)
+     */
+    private $depots;
+
+    /**
+     * @ORM\OneToMany(targetEntity="App\Entity\Compte", mappedBy="User", orphanRemoval=true)
+     */
+    private $comptes;
+
     public function __construct()
     {
         $this->isActive=true;
+        $this->depots = new ArrayCollection();
+        $this->comptes = new ArrayCollection();
     }
     public function getId(): ?int
     {
@@ -125,7 +148,82 @@ class User implements UserInterface
     }
     public function getRoles()
     {
-        return $this->roles[] = 'ROLE_'.strtoupper($this->getProfil()->getLibelle());
+        return $this->roles = ['ROLE_'.strtoupper($this->getProfil()->getLibelle())];
+    }
+
+    public function getPartenaire(): ?Partenaire
+    {
+        return $this->partenaire;
+    }
+
+    public function setPartenaire(?Partenaire $partenaire): self
+    {
+        $this->partenaire = $partenaire;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|Depot[]
+     */
+    public function getDepots(): Collection
+    {
+        return $this->depots;
+    }
+
+    public function addDepot(Depot $depot): self
+    {
+        if (!$this->depots->contains($depot)) {
+            $this->depots[] = $depot;
+            $depot->setUserd($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDepot(Depot $depot): self
+    {
+        if ($this->depots->contains($depot)) {
+            $this->depots->removeElement($depot);
+            // set the owning side to null (unless already changed)
+            //définissez le côté propriétaire sur null (sauf si déjà modifié)
+            if ($depot->getUserd() === $this) {
+                $depot->setUserd(null);
+            }
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection|Compte[]
+     */
+    public function getComptes(): Collection
+    {
+        return $this->comptes;
+    }
+
+    public function addCompte(Compte $compte): self
+    {
+        if (!$this->comptes->contains($compte)) {
+            $this->comptes[] = $compte;
+            $compte->setUserc($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCompte(Compte $compte): self
+    {
+        if ($this->comptes->contains($compte)) {
+            $this->comptes->removeElement($compte);
+            // set the owning side to null (unless already changed)
+            if ($compte->getUserc() === $this) {
+                $compte->setUserc(null);
+            }
+        }
+
+        return $this;
     }
    
 }
